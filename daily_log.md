@@ -5,3 +5,5 @@ understanding the hybrid automata, propositional logic
 introduction to KeYmaera X
 
 write the boolean parser
+
+write the parser for boolean and arithmetic expression
