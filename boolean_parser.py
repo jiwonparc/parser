@@ -1,5 +1,5 @@
 # Simple parser for a boolean expression using ply
-# calculate the boolean value of given boolean expression
+# parse a given boolean expression
 # logic operator syntax from KeYmaera X
 
 import ply.lex as lex
@@ -25,9 +25,9 @@ def t_error(t):
 lex.lex()
 
 precedence = (
-    ('left','OR'),
-    ('left','AND'),
-    ('left','NOT')
+    ('right','OR'),
+    ('right','AND'),
+    ('right','NOT')
 )
 
 def p_string(p):
