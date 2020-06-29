@@ -45,6 +45,14 @@ def t_error(t):
     print("illegal character '%s'" % t.value[0])
     t.lexer.skip(1)
 
+def reset():
+    lexer.lineno = 1
+    if lexer.lexdata is None:
+        return
+    tok = lexer.token()
+    while (tok is not None):
+        tok = lexer.token()
+
 lexer = lex.lex()
 
 precedence = (
@@ -148,10 +156,10 @@ def p_error(p):
 
 parser = yacc.yacc()
 
-#uncomment below to test on the terminal
-while True:
-    try:
-        s = input('')
-    except EOFError:
-        break
-    parser.parse(s)
+# TODO: Here we need to define a parse class, not start parsing right away!
+# while True:
+#     try:
+#         s = input('')
+#     except EOFError:
+#         break
+#     parser.parse(s)
