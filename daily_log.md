@@ -7,3 +7,12 @@ introduction to KeYmaera X
 write the boolean parser
 
 write the parser for boolean and arithmetic expression
+
+
+
+29/06/2020 - 03/07/2020 week 2
+
+extend the parser with qunatifier 
+
+write the parser for formula expression
+
