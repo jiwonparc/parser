@@ -72,6 +72,8 @@ class TestLexer(unittest.TestCase):
         self._test_single_token(0,'ID',1,'a04Az','a04Az')
         self._test_single_token(0,'ID',1,'a04Az_95','a04Az_95')
 
+        self._test_single_token(0,'TRUE',1,'True','True')
+
 
         self._test_single_token(0,'OR',1,'|','|')
         self._test_single_token(0,'AND',1,'&','&')

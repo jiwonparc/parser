@@ -5,21 +5,22 @@ import ply.lex as lex
 import ply.yacc as yacc
 import sys
 
-tokens = (
-    'TRUE', 'FALSE',
+reserved = {
+    'True' : 'TRUE',
+    'False' : 'FALSE',
+ }
+
+tokens = [
     'OR', 'AND', 'NOT',
     'ID', 'NUM',
     'PLUS', 'MINUS', 'MULTIPLY', 'DIVIDE', 'POWER',
     'LPAREN', 'RPAREN',
     'EQ', 'NEQ', 'GREATER', 'GEQ', 'LESS', 'LEQ'
-)
+] + list(reserved.values())
 
-t_TRUE = r'True'
-t_FALSE = r'False'
 t_OR = r'[|]'
 t_AND = r'&'
 t_NOT = r'!'
-t_ID = r'[a-zA-Z_]\w*'
 t_PLUS = r'\+'
 t_MINUS = r'-'
 t_MULTIPLY = r'\*'
@@ -36,6 +37,11 @@ t_RPAREN = r'\)'
 t_NUM = r'\d+'
 
 t_ignore = r' '
+
+def t_ID(t):
+    r'[a-zA-Z_]\w*'
+    t.type = reserved.get(t.value,'ID')    # Check for reserved words
+    return t
 
 def t_newline(t):
     r'\n+'
