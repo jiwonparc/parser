@@ -16,3 +16,7 @@ extend the parser with qunatifier
 
 write the parser for formula expression
 
+modify production rule for formula parser to separate boolean and arithmetic expressions
+
+write the structure for hybrid parser
+
