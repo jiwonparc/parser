@@ -75,41 +75,46 @@ precedence = (
     ('right', 'POWER')
 )
 
-def p_formula(p):
+def p_formulas(p):
     """
-    formula :
-             | formulas
+    formulas : formula
     """
-    if len(p) == 1:
-        p[0] = []
-    else:
-        p[0] = p[1]
+    p[0] = p[1]
     # uncomment to test
     print(p[0])
-def p_formula_comparison(p):
+
+def p_formula(p):
     """
-    formulas : terms EQ terms
-             | terms NEQ terms
-             | terms GEQ terms
-             | terms GREATER terms
-             | terms LEQ terms
-             | terms LESS terms
+    formula : arithmetic_formula
+            | LPAREN formula RPAREN
+    """
+    if p[1] == '(': p[0] = p[2]
+    else:   p[0] = p[1]
+
+def p_formula_arithmetic(p):
+    """
+    arithmetic_formula : terms EQ terms
+                       | terms NEQ terms
+                       | terms GEQ terms
+                       | terms GREATER terms
+                       | terms LEQ terms
+                       | terms LESS terms
     """
     p[0] = (p[2], p[1], p[3])
 
 def p_formula_logic(p):
     """
-    formulas : formulas OR formulas
-             | formulas AND formulas
-             | NOT formulas
+    formula : formula OR formula
+            | formula AND formula
+            | NOT formula
     """
     if p[1] == '!': p[0] = ('!', p[2])
     else:   p[0] = (p[2], p[1], p[3])
 
 def p_formula_quantifier(p):
     """
-    formulas : FORALL terms formulas
-             | EXISTS terms formulas
+    formula : FORALL terms formula
+            | EXISTS terms formula
     """
     p[0] = (p[1], p[2], p[3])
 
@@ -117,17 +122,17 @@ def p_formula_quantifier(p):
 # greater sign same as right diamond sign
 def p_formula_modality(p):
     """
-    formulas : LBOX ID RBOX formulas
-             | LDIA ID GREATER formulas
+    formula : LBOX ID RBOX formula
+            | LDIA ID GREATER formula
     """
     if p[2] == '[': p[0] = ('box', p[2], p[4])
     else:   p[0] = ('dia', p[2], p[4])
 
 def p_formula_implication(p):
     """
-    formulas : formulas BIMPLY formulas
-             | formulas RIMPLY formulas
-             | formulas LIMPLY formulas
+    formula : formula BIMPLY formula
+            | formula RIMPLY formula
+            | formula LIMPLY formula
     """
     if p[2] == '->': p[0] = ('imply', p[1], p[3])
     elif p[2] == '<-':  p[0] = ('imply', p[3], p[1])
@@ -135,11 +140,9 @@ def p_formula_implication(p):
 
 def p_formula_differential(p):
     """
-    formulas : LPAREN formulas RPAREN
-             | LPAREN formulas RPAREN PRIME
+    formula : LPAREN formula RPAREN PRIME
     """
-    if p[4] == "'": p[0] = ('differential', p[2])
-    else:   p[0] = (p[2])
+    p[0] = ('differential', p[2])
 
 def p_terms(p):
     """
@@ -215,8 +218,8 @@ def p_term_value(p):
 
 def p_formula_value(p):
     """
-    formulas : TRUE
-             | FALSE
+    formula : TRUE
+            | FALSE
     """
     if p[1] == 'true': p[0] == True
     else:   p[0] == False
