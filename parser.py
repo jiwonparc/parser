@@ -5,21 +5,22 @@ import ply.lex as lex
 import ply.yacc as yacc
 import sys
 
-tokens = (
-    'TRUE', 'FALSE',
+reserved = {
+    'True' : 'TRUE',
+    'False' : 'FALSE',
+ }
+
+tokens = [
     'OR', 'AND', 'NOT',
     'ID', 'NUM',
     'PLUS', 'MINUS', 'MULTIPLY', 'DIVIDE', 'POWER',
     'LPAREN', 'RPAREN',
     'EQ', 'NEQ', 'GREATER', 'GEQ', 'LESS', 'LEQ'
-)
+] + list(reserved.values())
 
-t_TRUE = r'True'
-t_FALSE = r'False'
 t_OR = r'[|]'
 t_AND = r'&'
 t_NOT = r'!'
-t_ID = r'[a-zA-Z_]\w*'
 t_PLUS = r'\+'
 t_MINUS = r'-'
 t_MULTIPLY = r'\*'
@@ -37,6 +38,11 @@ t_NUM = r'\d+'
 
 t_ignore = r' '
 
+def t_ID(t):
+    r'[a-zA-Z_]\w*'
+    t.type = reserved.get(t.value,'ID')    # Check for reserved words
+    return t
+
 def t_newline(t):
     r'\n+'
     t.lexer.lineno += t.value.count('\n')
@@ -44,6 +50,14 @@ def t_newline(t):
 def t_error(t):
     print("illegal character '%s'" % t.value[0])
     t.lexer.skip(1)
+
+def reset():
+    lexer.lineno = 1
+    if lexer.lexdata is None:
+        return
+    tok = lexer.token()
+    while (tok is not None):
+        tok = lexer.token()
 
 lexer = lex.lex()
 
@@ -148,10 +162,10 @@ def p_error(p):
 
 parser = yacc.yacc()
 
-#uncomment below to test on the terminal
-while True:
-    try:
-        s = input('')
-    except EOFError:
-        break
-    parser.parse(s)
+# TODO: Here we need to define a parse class, not start parsing right away!
+# while True:
+#     try:
+#         s = input('')
+#     except EOFError:
+#         break
+#     parser.parse(s)
