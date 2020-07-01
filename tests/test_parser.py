@@ -102,5 +102,4 @@ class TestParser(unittest.TestCase):
         _must_be_eq(parser, "x & y", ('&', ("IDENTIFIER", 'x'), ("IDENTIFIER", 'y')))
 
         # Not a complete expression - parsing must fail
-        _must_fail(parser, "x")
         _must_fail(parser, "x + y")
