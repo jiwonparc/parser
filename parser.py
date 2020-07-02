@@ -15,7 +15,8 @@ tokens = [
     'TRUE', 'FALSE',
     'PLUS', 'MINUS', 'MULTIPLY', 'DIVIDE', 'POWER',
     'LPAREN', 'RPAREN',
-    'EQ', 'NEQ', 'GREATER', 'GEQ', 'LESS', 'LEQ'
+    'EQ', 'NEQ', 'GREATER', 'GEQ', 'LESS', 'LEQ',
+    'PRIME', 'COMMA'
 ] + list(reserved.values())
 
 t_OR = r'[|]'
@@ -35,6 +36,8 @@ t_LEQ = r'\<\='
 t_LPAREN = r'\('
 t_RPAREN = r'\)'
 t_NUM = r'\d+'
+t_PRIME = r"'"
+t_COMMA = r','
 
 t_ignore = r' '
 
@@ -83,12 +86,12 @@ def p_formula_logic(p):
 
 def p_comparison(p):
     """
-    formula : term EQ term
-            | term NEQ term
-            | term GREATER term
-            | term GEQ term
-            | term LESS term
-            | term LEQ term
+    formula : terms EQ terms
+            | terms NEQ terms
+            | terms GREATER terms
+            | terms GEQ terms
+            | terms LESS terms
+            | terms LEQ terms
     """
     p[0] = (p[2], p[1], p[3])
 
@@ -102,10 +105,10 @@ def p_boolean_value(p):
 
 def p_term(p):
     """
-    term:
-        | term
+    terms :
+          | term
     """
-    if len(p) == 1: return []
+    if len(p) == 1: p[0] = p[1]
     else:   p[0] = p[1]
 
 def p_arithmetic(p):
