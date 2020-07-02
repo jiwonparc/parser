@@ -1,18 +1,18 @@
 # Simple parser using ply
-# quantifiers to be added next week
 # logic operator syntax from KeYmaera X
 import ply.lex as lex
 import ply.yacc as yacc
 import sys
 
 reserved = {
-    'True' : 'TRUE',
-    'False' : 'FALSE',
+    'true' : 'TRUE',
+    'false' : 'FALSE',
  }
 
 tokens = [
     'OR', 'AND', 'NOT',
     'ID', 'NUM',
+    'TRUE', 'FALSE',
     'PLUS', 'MINUS', 'MULTIPLY', 'DIVIDE', 'POWER',
     'LPAREN', 'RPAREN',
     'EQ', 'NEQ', 'GREATER', 'GEQ', 'LESS', 'LEQ'
@@ -39,7 +39,7 @@ t_NUM = r'\d+'
 t_ignore = r' '
 
 def t_ID(t):
-    r'[a-zA-Z_]\w*'
+    r'[a-zA-Z][a-zA-Z0-9]*\_?\_?[0-9]*'
     t.type = reserved.get(t.value,'ID')    # Check for reserved words
     return t
 
@@ -73,36 +73,48 @@ precedence = (
 
 )
 
-def p_string(p):
+def p_formula_logic(p):
     """
-    string :
-           | expression
-           | var_assign
-    """
-    #when empty
-    if len(p) == 1:
-        p[0] = []
-    else:
-        p[0] = p[1]
-    #uncomment to test on terminal
-    print(p[0])
-
-def p_var_assign(p):
-    """
-    var_assign : ID EQ expression
+    formula : NOT formula
+            | formula OR formula
+            | formula AND formula
     """
     p[0] = ('=', ('IDENTIFIER' ,p[1]), p[3])
 
-def p_expression(p):
+def p_comparison(p):
     """
-    expression : NOT expression
-               | expression OR expression
-               | expression AND expression
-               | expression PLUS expression
-               | expression MINUS expression
-               | expression MULTIPLY expression
-               | expression DIVIDE expression
-               | expression POWER expression
+    formula : term EQ term
+            | term NEQ term
+            | term GREATER term
+            | term GEQ term
+            | term LESS term
+            | term LEQ term
+    """
+    p[0] = (p[2], p[1], p[3])
+
+def p_boolean_value(p):
+    """
+    formula : TRUE
+            | FALSE
+    """
+    if p[1] == 'true':  p[0] = True
+    else:   p[0] = False
+
+def p_term(p):
+    """
+    term:
+        | term
+    """
+    if len(p) == 1: return []
+    else:   p[0] = p[1]
+
+def p_arithmetic(p):
+    """
+    term : term PLUS term
+         | term MINUS term
+         | term MULTIPLY term
+         | term DIVIDE term
+         | term POWER term
     """
     if p[1] == '!': p[0] = ('!', p[2])
     elif p[2] == '/':
@@ -111,49 +123,39 @@ def p_expression(p):
             raise  ZeroDivisionError("cannot divide by zero")
     else:   p[0] = (p[2], p[1], p[3])
 
-def p_comparison(p):
-    """
-    expression : expression EQ expression
-               | expression NEQ expression
-               | expression GREATER expression
-               | expression GEQ expression
-               | expression LESS expression
-               | expression LEQ expression
-    """
-    p[0] = (p[2], p[1], p[3])
-
 # assigning negative value instead of subtracting
 # probably better way to write
-def p_expression_uminus(p):
+def p_uminus(p):
     """
-    expression : MINUS expression %prec UMINUS
+    term : MINUS term %prec UMINUS
     """
     p[0] = ('*', p[2], '-1')
 
-def p_expression_group(p):
+def p_term_differential(p):
     """
-    expression : LPAREN expression RPAREN
+    term : LPAREN term RPAREN PRIME
     """
-    p[0] = p[2]
+    p[0] = ('DIFFERENTIAL', p[2])
 
-def p_numeric_value(p):
+def p_term_group(p):
     """
-    expression : NUM
+    term : LPAREN term RPAREN
+         | LPAREN term COMMA term RPAREN
+    """
+    if p[3] == ')': p[0] = p[2]
+    else:   p[0] = (p[2], p[4])
+
+def p_numeric_term(p):
+    """
+    term : NUM
     """
     p[0] = p[1]
 
-# if value is assigned to boolean value
-# then boolean value(True, False) becomes an identifier
-# maybe have to fix later
-def p_value(p):
+def p_variable_term(p):
     """
-    expression : ID
-               | TRUE
-               | FALSE
+    term : ID
     """
-    if p[1] == 'True':  p[0] = p[1]
-    elif p[1] == 'False': p[0] = p[1]
-    else:   p[0] = ('IDENTIFIER', p[1])
+    p[0] = ('IDENTIFIER', p[1])
 
 
 def p_error(p):
