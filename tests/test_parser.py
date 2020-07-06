@@ -110,9 +110,9 @@ class TestParser(unittest.TestCase):
         """
 
         prog_to_parse = [
-            "x := v",
-            "x' := v",
-            "? x = 0",
+            "x := f()",
+            "x' := f()",
+            "? x = f()",
             "x = 0 & A > 0 & B > 0 -> [{a := A; ++ a := B;}{x' = v, v' = a}]x >= 0"]
 
 
