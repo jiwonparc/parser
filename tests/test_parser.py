@@ -99,7 +99,24 @@ class TestParser(unittest.TestCase):
             self.assertTrue(parse_res == expected)
 
 
-        _must_be_eq(parser, "x & y", ('&', ("IDENTIFIER", 'x'), ("IDENTIFIER", 'y')))
-
         # Not a complete expression - parsing must fail
         _must_fail(parser, "true + false")
+
+
+
+    def test_parsing(self):
+        """ Test if the following expressions can be
+        parsed (without testing the result)
+        """
+
+        prog_to_parse = [
+            "x := v",
+            "x' := v",
+            "? x = 0",
+            "x = 0 & A > 0 & B > 0 -> [{a := A; ++ a := B;}{x' = v, v' = a}]x >= 0"]
+
+
+        for p in prog_to_parse:
+            print("Trying to parse %s" % p)
+            res = parser.parse(p)
+            print(res)
