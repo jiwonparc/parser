@@ -1,4 +1,5 @@
-#rser for formula expression in KeYmaera X using ply
+# Simple parser using ply
+# logic operator syntax from KeYmaera X
 # advanced material(predicate symbol) of formula expression has to be added
 import ply.lex as lex
 import ply.yacc as yacc
