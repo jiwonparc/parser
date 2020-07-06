@@ -20,3 +20,6 @@ modify production rule for formula parser to separate boolean and arithmetic exp
 
 write the structure for hybrid parser
 
+06/07/2020 - 10/07/2020 week 3
+
+code for the hybrid parser updated 
