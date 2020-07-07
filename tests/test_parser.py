@@ -98,9 +98,16 @@ class TestParser(unittest.TestCase):
 
             self.assertTrue(parse_res == expected)
 
-
+        _must_be_eq(parser, "y := 3*x + b;", ('DEFINE', 'y', ('+', ('*', '3', ('IDENTIFIER', 'x')), ('IDENTIFIER', 'b'))))
+        _must_be_eq(parser, "{a := A; ++ a:= B;}", ('CHOICE', ('DEFINE', 'a', ('IDENTIFIER', 'A')), ('DEFINE', 'a', ('IDENTIFIER', 'B'))))
+        _must_be_eq(parser, "{?v<=5;a:=A; ++ a := 0; a:= B;}", (('TEST', ('<=', ('IDENTIFIER', 'v'), '5')), ('CHOICE', ('DEFINE', 'a', ('IDENTIFIER', 'A')), ('CHOICE', ('DEFINE', 'a', '0'), ('DEFINE', 'a', 'B')))))
+        _must_be_eq(parser, "{x'=v & v>=0}", ('C_EVOLOUTION', ('DIFFERENTIAL', 'x', ('IDENTIFIER', 'v')), ('>=', ('IDENTIFIER', 'v'), '0')))
+            
+            
         # Not a complete expression - parsing must fail
         _must_fail(parser, "true + false")
+        _must_fail(parser, "y = 3*x + b")
+        _must_fail(parser, "a;,b;")
 
 
 
