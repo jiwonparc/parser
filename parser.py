@@ -20,7 +20,6 @@ tokens = [
     'LIMPLY', 'RIMPLY', 'BIMPLY',
     'PRIME',
     'COMMA', 'SEMICOLON', 'DEFINE', 'TEST', 'CHOICE',
-    'IF', 'ELSE'
 ] + list(reserved.values())
 
 t_OR = r'[|]'
@@ -35,7 +34,7 @@ t_EQ = r'\='
 t_NEQ = r'!\='
 t_GREATER = r'\>'
 t_GEQ = r'\>\='
-t_LESS = r'\>'
+t_LESS = r'\<'
 t_LEQ = r'\<\='
 t_LPAREN = r'\('
 t_RPAREN = r'\)'
@@ -46,17 +45,15 @@ t_LCURL = r'{'
 t_RCURL = r'}'
 t_FORALL = r'\\forall'
 t_EXISTS = r'\\exists'
-t_LIMPLY = r'->'
-t_RIMPLY = r'<-'
-t_BIMPLY = r'<->'
+t_LIMPLY = r'\-\>'
+t_RIMPLY = r'\<\-'
+t_BIMPLY = r'\<\-\>'
 t_PRIME = r'\''
 t_COMMA = r','
 t_SEMICOLON = r';'
 t_DEFINE = r':='
 t_TEST = r'\?'
 t_CHOICE = r'\+{2}'
-t_IF = r'if'
-t_ELSE = r'else'
 
 t_ignore = r' '
 
@@ -85,7 +82,6 @@ def reset():
 lexer = lex.lex()
 
 precedence = (
-    ('right', 'COMMA'),
     ('right', 'CHOICE'),
     ('right', 'SEMICOLON'),
     ('right', 'REPET'),
@@ -110,14 +106,6 @@ def p_program_form(p):
     if p[1] == '{': p[0] = p[2]
     else: p[0] = (p[1], p[2])
 
-def p_program_conditional(p):
-    """
-    program : IF LPAREN formula RPAREN LCURL program RCURL ELSE LCURL program RCURL
-            | IF LPAREN formula RPAREN LCURL program RCURL
-    """
-    if p[8] == 'else':  p[0] = ('if', p[3], p[6], 'else', p[10])
-    else:   p[0] = ('if', p[3], p[6])
-
 def p_program_repet(p):
     """
     program : LCURL program RCURL STAR %prec REPET
@@ -126,38 +114,62 @@ def p_program_repet(p):
 
 def p_program(p):
     """
-    program : TEST program SEMICOLON
-            | LCURL d_program AND formula RCURL
+    program : LCURL d_program AND formula RCURL
             | program CHOICE program
     """
-    if p[1] == '?': p[0] = (p[1], p[2])
-    elif p[3] == '&': p[0] = ('C_EVOLOUTION', p[2], p[4])
+    if p[3] == '&': p[0] = ('C_EVOLOUTION', p[2], p[4])
     elif p[2] == '++': p[0] = ('CHOICE', p[1], p[3])
 
 def p_program_test(p):
     """
     program : TEST formula SEMICOLON
     """
-    p[0] = ('TEST', p[2])
+    p[0] = ('test', p[2])
 
-# ambiguity on the documentation P ::= a;
-# not sure what 'a' is
-# put 'a' as a variable name for now
 def p_program_assigntment(p):
     """
     program : ID SEMICOLON
+            | ID DEFINE STAR SEMICOLON
             | ID DEFINE term SEMICOLON
             | ID PRIME DEFINE term SEMICOLON
     """
     if p[2] == ';': p[0] = ('IDENTIFIER', p[1])
-    elif p[2] == ':=': p[0] = ('DEFINE', p[1], p[3])
+    elif p[2] == ':=':
+        if p[3] == '*': p[0] = ('NONDASSIGNMENT', p[1])
+        else:   p[0] = ('DEFINE', p[1], p[3])
     else:   p[0] = ('DIFFERENTIAL', p[1], p[4])
+
+def p_differential_programs(p):
+    """
+    d_program :
+    """
+    if p[2] == ',': p[0] = (p[1], p[3])
+
+def p_differential_program(p):
+    """
+    d_program : NUM
+              | ID PRIME EQ term
+              | d_program COMMA d_program
+    """
+    if p[2] == "'": p[0] = ('DIFFERENTIAL', p[1], p[4])
+    elif p[2] == ",":   p[0] = (p[1], p[3])
+    else:   p[0] = p[1]
 
 def p_formula_form(p):
     """
     formula : LPAREN formula RPAREN
     """
     p[0] = p[2]
+
+def p_formula_implication(p):
+    """
+    formula : formula BIMPLY formula
+            | formula RIMPLY formula
+            | formula LIMPLY formula
+    """
+    if p[2] == '->': p[0] = ('IMPLY', p[1], p[3])
+    elif p[2] == '<-':  p[0] = ('IMPLY', p[3], p[1])
+    else :   p[0] = ('IFF', p[1], p[3])
 
 def p_formula_logic(p):
     """
@@ -183,16 +195,6 @@ def p_formula_modality(p):
     if p[2] == '[': p[0] = ('BOX', p[2], p[4])
     else:   p[0] = ('DIA', p[2], p[4])
 
-def p_formula_implication(p):
-    """
-    formula : formula BIMPLY formula
-            | formula RIMPLY formula
-            | formula LIMPLY formula
-    """
-    if p[2] == '->': p[0] = ('imply', p[1], p[3])
-    elif p[2] == '<-':  p[0] = ('imply', p[3], p[1])
-    else:   ('iff', p[1], p[3])
-
 def p_formula_differential(p):
     """
     formula : LPAREN formula RPAREN PRIME
@@ -215,8 +217,8 @@ def p_formula_value(p):
     formula : TRUE
             | FALSE
     """
-    if p[1] == 'true': p[0] == True
-    else:   p[0] == False
+    if p[1] == 'true': p[0] = 'true'
+    else:   p[0] = 'false'
 
 def p_term(p):
     """
@@ -237,20 +239,6 @@ def p_function(p):
     """
     if p[3] == ')': p[0] = ('Constant Symbol', p[1]+'()')
     else:   p[0] = ('function', p[1]+p[2]+str(p[3])+p[4])
-
-def p_differential_programs(p):
-    """
-    d_program : d_program COMMA d_program
-    """
-    if p[2] == ',': p[0] = (p[1], p[3])
-
-def p_differential_program(p):
-    """
-    d_program : NUM
-              | ID PRIME EQ term
-    """
-    if p[2] == "'": p[0] = ('DIFFERENTIAL', p[1], p[4])
-    else:   p[0] = p[1]
 
 def p_term_group(p):
     """
@@ -282,8 +270,6 @@ def p_term_arithmetic(p):
             raise  ZeroDivisionError("cannot divide by zero")
     else:   p[0] = (p[2], p[1], p[3])
 
-# unary minus
-# probably better way to write
 def p_term_uminus(p):
     """
     term : MINUS term %prec UMINUS
