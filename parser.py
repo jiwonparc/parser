@@ -139,12 +139,6 @@ def p_program_assigntment(p):
         else:   p[0] = ('DEFINE', p[1], p[3])
     else:   p[0] = ('DIFFERENTIAL', p[1], p[4])
 
-def p_differential_programs(p):
-    """
-    d_program :
-    """
-    if p[2] == ',': p[0] = (p[1], p[3])
-
 def p_differential_program(p):
     """
     d_program : NUM
