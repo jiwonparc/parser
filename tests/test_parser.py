@@ -72,7 +72,7 @@ class TestLexer(unittest.TestCase):
         self._test_single_token(0,'ID',1,'a04Az','a04Az')
         self._test_single_token(0,'ID',1,'a04Az_95','a04Az_95')
 
-        self._test_single_token(0,'TRUE',1,'True','True')
+        self._test_single_token(0,'TRUE',1,'true','true')
 
 
         self._test_single_token(0,'OR',1,'|','|')
@@ -98,32 +98,14 @@ class TestParser(unittest.TestCase):
 
             self.assertTrue(parse_res == expected)
 
+
         _must_be_eq(parser, "y := 3*x + b;", ('DEFINE', 'y', ('+', ('*', '3', ('IDENTIFIER', 'x')), ('IDENTIFIER', 'b'))))
         _must_be_eq(parser, "{a := A; ++ a:= B;}", ('CHOICE', ('DEFINE', 'a', ('IDENTIFIER', 'A')), ('DEFINE', 'a', ('IDENTIFIER', 'B'))))
-        _must_be_eq(parser, "{?v<=5;a:=A; ++ a := 0; a:= B;}", (('TEST', ('<=', ('IDENTIFIER', 'v'), '5')), ('CHOICE', ('DEFINE', 'a', ('IDENTIFIER', 'A')), ('CHOICE', ('DEFINE', 'a', '0'), ('DEFINE', 'a', 'B')))))
+        _must_be_eq(parser, "{?v <= 5; a :=A ; ++ a := 0; ++ a := -B;}", (('TEST', ('<=', ('IDENTIFIER', 'v'), '5')), ('CHOICE', ('DEFINE', 'a', ('IDENTIFIER', 'A')), ('CHOICE', ('DEFINE', 'a', '0'), ('DEFINE', 'a', ('*', ('IDENTIFIER', 'B'), '-1'))))))
         _must_be_eq(parser, "{x'=v & v>=0}", ('C_EVOLOUTION', ('DIFFERENTIAL', 'x', ('IDENTIFIER', 'v')), ('>=', ('IDENTIFIER', 'v'), '0')))
-            
-            
+
+
         # Not a complete expression - parsing must fail
         _must_fail(parser, "true + false")
         _must_fail(parser, "y = 3*x + b")
         _must_fail(parser, "a;,b;")
-
-
-
-    def test_parsing(self):
-        """ Test if the following expressions can be
-        parsed (without testing the result)
-        """
-
-        prog_to_parse = [
-            "x := f();",
-            "x' := f();",
-            "? x = f();",
-            "x = 0 & A > 0 & B > 0 -> [{a := A; ++ a := B;}{x' = v, v' = a}]x >= 0"]
-
-
-        for p in prog_to_parse:
-            print("Trying to parse %s" % p)
-            res = parser.parse(p)
-            print(res)
