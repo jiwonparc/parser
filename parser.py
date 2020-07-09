@@ -124,7 +124,7 @@ def p_program_test(p):
     """
     program : TEST formula SEMICOLON
     """
-    p[0] = ('test', p[2])
+    p[0] = ('TEST', p[2])
 
 def p_program_assigntment(p):
     """
