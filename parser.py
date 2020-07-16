@@ -4,6 +4,7 @@
 import ply.lex as lex
 import ply.yacc as yacc
 import sys
+from AST import *
 
 reserved = {
     'true' : 'TRUE',
@@ -104,28 +105,37 @@ def p_program_form(p):
             | LCURL program RCURL
     """
     if p[1] == '{': p[0] = p[2]
-    else: p[0] = (p[1], p[2])
+    else: p[0] = HybridModel([p[1], p[2]])
 
 def p_program_repet(p):
     """
     program : LCURL program RCURL STAR %prec REPET
     """
-    p[0] = ('REPETITION', p[2])
+    syntax = SyntaxInfo(p.lineno(4), p.lexpos(4))
+    p[0] = Operator('REPETITION', syntax, left = p[2])
 
 def p_program(p):
     """
     program : LCURL d_program AND formula RCURL
             | program CHOICE program
     """
-    if p[3] == '&': p[0] = ('C_EVOLOUTION', p[2], p[4])
-    elif p[2] == '++': p[0] = ('CHOICE', p[1], p[3])
+    if p[3] == '&':
+        syntax = SyntaxInfo(p.lineno(3), p.lexpos(3))
+        p[0] = Operator('C_EVOLOUTION', syntax, left = p[2], right = p[4])
+    elif p[2] == '++':
+        syntax = SyntaxInfo(p.lineno(2), p.lexpos(2))
+        p[0] = Operator('CHOICE', syntax, left = p[1], right = p[3])
 
 def p_program_test(p):
     """
     program : TEST formula SEMICOLON
     """
-    p[0] = ('TEST', p[2])
+    syntax = SyntaxInfo(p.lineno(1), p.lexpos(1))
+    p[0] = Operator('TEST', syntax, left = p[2])
 
+# ambiguity on the documentation P ::= a;
+# not sure what 'a' is
+# put 'a' as a variable name for now
 def p_program_assigntment(p):
     """
     program : ID SEMICOLON
@@ -133,11 +143,19 @@ def p_program_assigntment(p):
             | ID DEFINE term SEMICOLON
             | ID PRIME DEFINE term SEMICOLON
     """
-    if p[2] == ';': p[0] = ('IDENTIFIER', p[1])
+    if p[2] == ';':
+        syntax = SyntaxInfo(p.lineno(1), p.lexpos(1))
+        p[0] = Variable(p[1], 'IDENTIFIER', syntax)
     elif p[2] == ':=':
-        if p[3] == '*': p[0] = ('NONDASSIGNMENT', p[1])
-        else:   p[0] = ('DEFINE', p[1], p[3])
-    else:   p[0] = ('DIFFERENTIAL', p[1], p[4])
+        if p[3] == '*':
+            syntax = SyntaxInfo(p.lineno(2), p.lexpos(2))
+            p[0] = Assignment(p[1], 'NONDASSIGNMENT', syntax)
+        else:
+            syntax = SyntaxInfo(p.lineno(2), p.lexpos(2))
+            p[0] = Assignment(p[1], p[3], syntax)
+    else:
+        syntax = SyntaxInfo(p.lineno(2), p.lexpos(2))
+        p[0] = Operator('DIFFERENTIAL', syntax, left = p[1], right = p[4])
 
 def p_differential_program(p):
     """
@@ -145,9 +163,14 @@ def p_differential_program(p):
               | ID PRIME EQ term
               | d_program COMMA d_program
     """
-    if p[2] == "'": p[0] = ('DIFFERENTIAL', p[1], p[4])
-    elif p[2] == ",":   p[0] = (p[1], p[3])
-    else:   p[0] = p[1]
+    if p[2] == "'":
+        syntax = SyntaxInfo(p.lineno(2), p.lexpos(2))
+        p[0] = Operator('DIFFERENTIAL', syntax, left = p[1], right = p[4])
+    elif p[2] == ",":
+        p[0] = HybridModel([p[1], p[3]])
+    else:
+        syntax = SyntaxInfo(p.lineno(1), p.lexpos(1))
+        p[0] = Variable(p[1], 'DP_CST', syntax)
 
 def p_formula_form(p):
     """
@@ -161,9 +184,15 @@ def p_formula_implication(p):
             | formula RIMPLY formula
             | formula LIMPLY formula
     """
-    if p[2] == '->': p[0] = ('IMPLY', p[1], p[3])
-    elif p[2] == '<-':  p[0] = ('IMPLY', p[3], p[1])
-    else :   p[0] = ('IFF', p[1], p[3])
+    if p[2] == '->':
+        syntax = SyntaxInfo(p.lineno(2), p.lexpos(2))
+        p[0] = Operator('IMPLY', syntax, left = p[1], right = p[3])
+    elif p[2] == '<-':
+        syntax = SyntaxInfo(p.lineno(2), p.lexpos(2))
+        p[0] = Operator('IMPLY', syntax, left = p[3], right = p[1])
+    else :
+        syntax = SyntaxInfo(p.lineno(2), p.lexpos(2))
+        p[0] = Operator('IFF', syntax, left = p[1], right = p[3])
 
 def p_formula_logic(p):
     """
@@ -171,29 +200,39 @@ def p_formula_logic(p):
             | formula AND formula
             | NOT formula
     """
-    if p[1] == '!': p[0] = ('!', p[2])
-    else:   p[0] = (p[2], p[1], p[3])
+    if p[1] == '!':
+        syntax = SyntaxInfo(p.lineno(1), p.lexpos(1))
+        p[0] = Operator(p[1], syntax, left = p[1])
+    else:
+        syntax = SyntaxInfo(p.lineno(2), p.lexpos(2))
+        p[0] = Operator(p[2], syntax, left = p[1], right = p[3])
 
 def p_formula_quantifier(p):
     """
     formula : FORALL ID formula
             | EXISTS ID formula
     """
-    p[0] = (p[1], ('IDENTIFIER', p[2]), p[3])
+    syntax = SyntaxInfo(p.lineno(1), p.lexpos(1))
+    p[0] = Operator(p[1], syntax, left = p[2], right = p[3])
 
 def p_formula_modality(p):
     """
     formula : LBOX program RBOX formula %prec BOX
             | LESS program GREATER formula %prec DIA
     """
-    if p[2] == '[': p[0] = ('BOX', p[2], p[4])
-    else:   p[0] = ('DIA', p[2], p[4])
+    if p[1] == '[':
+        syntax = SyntaxInfo(p.lineno(1), p.lexpos(1))
+        p[0] = Operator('BOX', syntax, left = p[2], right = p[4])
+    else:
+        syntax = SyntaxInfo(p.lineno(1), p.lexpos(1))
+        p[0] = Operator('DIA', syntax, left = p[2], right = p[4])
 
 def p_formula_differential(p):
     """
     formula : LPAREN formula RPAREN PRIME
     """
-    p[0] = ('DIFFERENTIAL', p[2])
+    syntax = SyntaxInfo(p.lineno(4), p.lexpos(4))
+    p[0] = Operator('DIFFERENTIAL', syntax, left = p[2])
 
 def p_formula_arithmetic(p):
     """
@@ -204,15 +243,20 @@ def p_formula_arithmetic(p):
             | term LEQ term
             | term LESS term
     """
-    p[0] = (p[2], p[1], p[3])
+    syntax = SyntaxInfo(p.lineno(2), p.lexpos(2))
+    p[0] = Operator(p[1], syntax, left = p[1], right = p[3])
 
 def p_formula_value(p):
     """
     formula : TRUE
             | FALSE
     """
-    if p[1] == 'true': p[0] = 'true'
-    else:   p[0] = 'false'
+    if p[1] == 'true':
+        syntax = SyntaxInfo(p.lineno(1), p.lexpos(1))
+        p[0] = Variable(p[1], 'BOOLEAN', syntax)
+    else:
+        syntax = SyntaxInfo(p.lineno(1), p.lexpos(1))
+        p[0] = Variable(p[1], 'BOOLEAN', syntax)
 
 def p_term(p):
     """
@@ -231,15 +275,19 @@ def p_function(p):
     function : ID LPAREN RPAREN
              | ID LPAREN term RPAREN
     """
-    if p[3] == ')': p[0] = ('Constant Symbol', p[1]+'()')
-    else:   p[0] = ('function', p[1]+p[2]+str(p[3])+p[4])
+    if p[3] == ')':
+        syntax = SyntaxInfo(p.lineno(1), p.lexpos(1))
+        p[0] = Function(p[1], 'CST_SYM', 'constant', syntax)
+    else:
+        syntax = SyntaxInfo(p.lineno(1), p.lexpos(1))
+        p[0] = Variable(p[1], 'FUNCTION', p[3].value, syntax)
 
 def p_term_group(p):
     """
     term : LPAREN term RPAREN
          | LPAREN term COMMA term RPAREN
     """
-    if p[3] == ',':   p[0] = (p[2], p[4])
+    if p[3] == ',':   p[0] = HybridModel([p[2], p[4]])
     else:   p[0] = p[2]
 
 def p_differential(p):
@@ -247,8 +295,12 @@ def p_differential(p):
     term : term PRIME
          | LPAREN term RPAREN PRIME
     """
-    if p[1] == '(': p[0] = ('differential', p[2])
-    else:   p[0] = ('differential', p[1])
+    if p[1] == '(':
+        syntax = SyntaxInfo(p.lineno(2), p.lexpos(2))
+        p[0] = Operator('DIFFERENTIAL', syntax, left = p[1])
+    else:
+        syntax = SyntaxInfo(p.lineno(4), p.lexpos(4))
+        p[0] = Operator('DIFFERENTIAL', syntax, left = p[2])
 
 def p_term_arithmetic(p):
     """
@@ -259,40 +311,44 @@ def p_term_arithmetic(p):
          | term POWER term
     """
     if p[2] == '/':
-        if p[3] != 0:   p[0] = (p[2], p[1], p[3])
+        if p[3] != 0:
+            syntax = SyntaxInfo(p.lineno(2), p.lexpos(2))
+            p[0] = Operator(p[2], syntax, left = p[1], right = p[3])
         else:
             raise  ZeroDivisionError("cannot divide by zero")
-    else:   p[0] = (p[2], p[1], p[3])
+    elif p[2] == '+':
+        syntax = SyntaxInfo(p.lineno(2), p.lexpos(2))
+        p[0] = Operator(p[2], syntax, left = p[1], right = p[3])
+    elif p[2] == '-':
+        syntax = SyntaxInfo(p.lineno(2), p.lexpos(2))
+        p[0] = Operator(p[2], syntax, left = p[1], right = p[3])
+    elif p[2] == '*':
+        syntax = SyntaxInfo(p.lineno(2), p.lexpos(2))
+        p[0] = Operator(p[2], syntax, left = p[1], right = p[3])
 
 def p_term_uminus(p):
     """
     term : MINUS term %prec UMINUS
     """
-    p[0] = ('*', p[2], '-1')
-
+    p[2].value = '-' + p[2].value
+    p[0] = p[2]
 
 def p_term_numeric_value(p):
     """
     term : NUM
     """
-    p[0] = p[1]
+    syntax = SyntaxInfo(p.lineno(1), p.lexpos(1))
+    p[0] = Variable(p[1], 'NUMBER', syntax)
 
 def p_term_value(p):
     """
     term : ID
     """
-    p[0] = ('IDENTIFIER', p[1])
+    syntax = SyntaxInfo(p.lineno(1), p.lexpos(1))
+    p[0] = Variable(p[1], 'IDENTIFIER', syntax)
 
 def p_error(p):
     print("p_error {}".format(p))
     raise TypeError("unknown text at %r" % (p.value))
 
 parser = yacc.yacc()
-
-# TODO: Here we need to define a parse class, not start parsing right away!
-#while True:
-#    try:
-#        s = input('')
-#    except EOFError:
-#        break
-#    parser.parse(s)
