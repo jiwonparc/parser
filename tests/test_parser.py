@@ -9,7 +9,7 @@ from io import StringIO
 
 from ply.lex import LexToken
 import ply.yacc as yacc
-from parser_w_ast import lexer, reset, parser
+from parser import lexer, reset, parser
 
 
 
