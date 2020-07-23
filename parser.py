@@ -104,8 +104,14 @@ def p_program_form(p):
     program : program program
             | LCURL program RCURL
     """
-    if p[1] == '{': p[0] = p[2]
-    else: p[0] = HybridModel([p[1], p[2]])
+    if p[1] == '{':
+        syntax = SyntaxInfo(p.lineno(1), p.lexpos(1))
+        Bracket('CURL', p[2], syntax)
+    else:
+        if isinstance(p[1],Tree):
+            p[1].programs.append(p[2])
+        else:
+            p[0] = Tree([p[1],p[2]])
 
 def p_program_repet(p):
     """
@@ -155,7 +161,6 @@ def p_program_assigntment(p):
             p[0] = Assignment(p[1], p[3], syntax)
     else:
         syntax = SyntaxInfo(p.lineno(2), p.lexpos(2))
-        p[0] = Operator('DIFFERENTIAL', syntax, left = p[1], right = p[4])
 
 def p_differential_program(p):
     """
@@ -167,7 +172,10 @@ def p_differential_program(p):
         syntax = SyntaxInfo(p.lineno(2), p.lexpos(2))
         p[0] = Operator('DIFFERENTIAL', syntax, left = p[1], right = p[4])
     elif p[2] == ",":
-        p[0] = HybridModel([p[1], p[3]])
+        if isinstance(p[1], Tree):
+            p[1].programs.append(p[3])
+        else:
+            p[0] = Tree([p[1], p[3]])
     else:
         syntax = SyntaxInfo(p.lineno(1), p.lexpos(1))
         p[0] = Variable(p[1], 'DP_CST', syntax)
@@ -176,7 +184,8 @@ def p_formula_form(p):
     """
     formula : LPAREN formula RPAREN
     """
-    p[0] = p[2]
+    syntax = SyntaxInfo(p.lineno(1), p.lexpos(1))
+    p[0] = Bracket('PAREN', p[2], syntax)
 
 def p_formula_implication(p):
     """
@@ -184,15 +193,8 @@ def p_formula_implication(p):
             | formula RIMPLY formula
             | formula LIMPLY formula
     """
-    if p[2] == '->':
-        syntax = SyntaxInfo(p.lineno(2), p.lexpos(2))
-        p[0] = Operator('IMPLY', syntax, left = p[1], right = p[3])
-    elif p[2] == '<-':
-        syntax = SyntaxInfo(p.lineno(2), p.lexpos(2))
-        p[0] = Operator('IMPLY', syntax, left = p[3], right = p[1])
-    else :
-        syntax = SyntaxInfo(p.lineno(2), p.lexpos(2))
-        p[0] = Operator('IFF', syntax, left = p[1], right = p[3])
+    syntax = SyntaxInfo(p.lineno(2), p.lexpos(2))
+    p[0] = Operator(p[2], syntax, left = p[1], right = p[3])
 
 def p_formula_logic(p):
     """
@@ -213,7 +215,7 @@ def p_formula_quantifier(p):
             | EXISTS ID formula
     """
     syntax = SyntaxInfo(p.lineno(1), p.lexpos(1))
-    p[0] = Operator(p[1], syntax, left = p[2], right = p[3])
+    p[0] = Quantifier(p[1], p[2], p[3], syntax)
 
 def p_formula_modality(p):
     """
@@ -222,10 +224,10 @@ def p_formula_modality(p):
     """
     if p[1] == '[':
         syntax = SyntaxInfo(p.lineno(1), p.lexpos(1))
-        p[0] = Operator('BOX', syntax, left = p[2], right = p[4])
+        p[0] = Modality('BOX', p[2], p[4], syntax)
     else:
         syntax = SyntaxInfo(p.lineno(1), p.lexpos(1))
-        p[0] = Operator('DIA', syntax, left = p[2], right = p[4])
+        p[0] = Modality('DIA', p[2], p[4], syntax)
 
 def p_formula_differential(p):
     """
@@ -280,15 +282,21 @@ def p_function(p):
         p[0] = Function(p[1], 'CST_SYM', 'constant', syntax)
     else:
         syntax = SyntaxInfo(p.lineno(1), p.lexpos(1))
-        p[0] = Variable(p[1], 'FUNCTION', p[3].value, syntax)
+        p[0] = Function(p[1], 'FUNCTION', p[3].value, syntax)
 
 def p_term_group(p):
     """
     term : LPAREN term RPAREN
          | LPAREN term COMMA term RPAREN
     """
-    if p[3] == ',':   p[0] = HybridModel([p[2], p[4]])
-    else:   p[0] = p[2]
+    if p[3] == ',':
+        if isinstance(p[2], Tree):
+            p[2].programs.append(p[4])
+        else:
+            p[0] = Tree([p[2], p[4]])
+    else:
+        syntax = SyntaxInfo(p.lineno(1), p.lexpos(1))
+        p[0] = Bracket('PAREN', p[2], syntax_info)
 
 def p_differential(p):
     """
@@ -297,7 +305,8 @@ def p_differential(p):
     """
     if p[1] == '(':
         syntax = SyntaxInfo(p.lineno(2), p.lexpos(2))
-        p[0] = Operator('DIFFERENTIAL', syntax, left = p[1])
+        syntax_b = SyntaxInfo(p.lineno(1), p.lexpos(1))
+        p[0] = Operator('DIFFERENTIAL', syntax, left = Bracket('PAREN',p[2],syntax_b))
     else:
         syntax = SyntaxInfo(p.lineno(4), p.lexpos(4))
         p[0] = Operator('DIFFERENTIAL', syntax, left = p[2])
