@@ -246,7 +246,7 @@ def p_formula_arithmetic(p):
             | term LESS term
     """
     syntax = SyntaxInfo(p.lineno(2), p.lexpos(2))
-    p[0] = Operator(p[1], syntax, left = p[1], right = p[3])
+    p[0] = Operator(p[2], syntax, left = p[1], right = p[3])
 
 def p_formula_value(p):
     """
@@ -361,3 +361,4 @@ def p_error(p):
     raise TypeError("unknown text at %r" % (p.value))
 
 parser = yacc.yacc()
+
