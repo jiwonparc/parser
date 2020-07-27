@@ -98,46 +98,49 @@ class Tree(object):
 class Visitor(object):
     def visit(self, node):
         if type(node) == Tree:
-            map(self.visit, node.programs)
+            tree = map(self.visit, node.programs)
+            return (', '.join(tree))
         elif type(node) == Quantifier:
-            print("{} {} {}".format(node.type, node.variable, self.visit(node.formula)))
+            return("{} {} {}".format(node.type, node.variable, self.visit(node.formula)))
         elif type(node) == Modality:
             if node.type == 'BOX':
-                print("[{}] {}".format(node.program, self.visit(node.formula)))
+                return("[{}] {}".format(node.program, self.visit(node.formula)))
             else:
-                print("<{}> {}".format(node.program, self.visit(node.formula)))
+                return("<{}> {}".format(node.program, self.visit(node.formula)))
         elif type(node) == Bracket:
             if node.type == 'PAREN':
-                print ("({})".format(self.visit(node.expression)))
+                return("({})".format(self.visit(node.expression)))
             else:
-                print("{"+self.visit(node.expression)+"}")
+                return("{"+self.visit(node.expression)+"}")
         elif type(node) == Assignment:
             if node.value == 'NONDASSIGNMENT':
-                print("{} := *;".format(node.name))
+                return("{} := *;".format(node.name))
             else:
-                print("{} := {};".format(node.name, self.visit(node.value)))
+                return("{} := {};".format(node.name, self.visit(node.value)))
         elif type(node) == Function:
             if node.type == 'CST_SYM':
-                print(node.name + "()")
+                return(node.name + "()")
             else:
-                print("{}({})".format(node.name, self.visit(node.variable)))
+                return("{}({})".format(node.name, self.visit(node.variable)))
         elif type(node) == Operator:
             if node.type == 'REPETITION':
-                print("{"+self.visit(node.left)+"}*")
+                return("{"+self.visit(node.left)+"}*")
             elif node.type == 'C_EVOLOUTION':
-                print("{"+ self.visit(node.left) + " & "+ self.visit(node.right)+"}")
+                return("{"+ self.visit(node.left) + " & "+ self.visit(node.right)+"}")
             elif node.type == 'CHOICE':
-                print("{} ++ {}".format(self.visit(node.left), self.visit(node.right)))
+                return("{} ++ {}".format(self.visit(node.left), self.visit(node.right)))
             elif node.type == 'TEST':
-                print("?{};".format(self.visit(node.left)))
+                return("?{};".format(self.visit(node.left)))
             elif node.type == 'DIFFERENTIAL':
                 if node.right != None:
-                    print("{} '= {}".format(self.visit(node.left), self.visit(node.right)))
+                    return("{} '= {}".format(self.visit(node.left), self.visit(node.right)))
                 else:
-                    print(self.visit(node.left)+"'")
+                    return(self.visit(node.left)+"'")
             elif node.type == '!':
-                print("!{}".fomrat(self.visit(node.left)))
+                return("!{}".format(self.visit(node.left)))
             else:
-                print("{} {} {}".fomrat(self.visit(node.left), node.type, self.visit(node.right)))
+                return("{} {} {}".format(self.visit(node.left), node.type, self.visit(node.right)))
         elif type(node) == Variable:
             return node.value
+        else:
+            return node
