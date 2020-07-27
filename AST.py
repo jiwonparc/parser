@@ -1,5 +1,4 @@
 # defining a class for AST
-
 class SyntaxInfo(object):
     """ Store the low level info of the node, like the line number and column """
     def __init__(self, line_number, column):
@@ -96,68 +95,49 @@ class Tree(object):
         return "Tree({})".format(self.programs)
 
 # visitor pattern for the tree
-# code from https://chris-lamb.co.uk/posts/visitor-pattern-in-python
 class Visitor(object):
-    @dispatch.on('node')
     def visit(self, node):
-        """This is the generic method"""
-
-    @visit.when(Tree)
-    def visit(self, node):
-        map(self.visit, node.programs)
-
-    @visit.when(Quantifier)
-    def visit(self, node):
-        print("{} {} {}".format(node.type, node.variable, self.visit(node.formula)))
-
-    @visit.when(Modality)
-    def visit(self, node):
-        if node.type == 'BOX':
-            print("[{}] {}".format(node.program, node.formula))
-        else:
-            print("<{}> {}".format(node.program, node.formula))
-
-    @visit.when(Bracket)
-    def visit(self, node):
-        if node.type == 'PAREN':
-            print ("({})".format(self.visit(node.expression)))
-        else:
-            print("{"+self.visit(node.expression)+"}")
-
-    @visit.when(Assignment)
-    def visit(self, node):
-        if node.value == 'NONDASSIGNMENT':
-            print("{} := *;".format(node.name))
-        else:
-            print("{} := {};".format(node.name, node.value))
-
-    @visit.when(Function)
-    def visit(self, node):
-        if node.type == 'CST_SYM':
-            print(node.name + "()")
-        else:
-            print("{}({})".format(node.name, self.visit(node.variable)))
-
-    @visit.when(Operator)
-    def visit(self, node):
-        if node.type == 'REPETITION':
-            print("{"+self.visit(node.left)+"}*")
-        elif node.type == 'C_EVOLOUTION':
-            print("{"+ self.visit(node.left) + " & "+ self.visit(node.right)+"}")
-        elif node.type == 'CHOICE':
-            print("{} ++ {}".format(self.visit(node.left), self.visit(node.right)))
-        elif node.type == 'TEST':
-            print("?{};".format(self.visit(node.left)))
-        elif node.type == 'DIFFERENTIAL':
-            if node.right != None:
-                print("{} '= {}".format(self.visit(node.left), self.visit(node.right)))
+        if type(node) == Tree:
+            map(self.visit, node.programs)
+        elif type(node) == Quantifier:
+            print("{} {} {}".format(node.type, node.variable, self.visit(node.formula)))
+        elif type(node) == Modality:
+            if node.type == 'BOX':
+                print("[{}] {}".format(node.program, self.visit(node.formula)))
             else:
-                print(self.visit(node.left)+"'")
-        elif node.type == '!':
-            print("!{}".fomrat(self.visit(node.left)))
-        else:
-            print("{} {} {}".fomrat(self.visit(node.left), node.type, self.visit(node.right)))
-
-    @visit.when(Variable)
-    def visit(self, node):
-        print (self.value)
+                print("<{}> {}".format(node.program, self.visit(node.formula)))
+        elif type(node) == Bracket:
+            if node.type == 'PAREN':
+                print ("({})".format(self.visit(node.expression)))
+            else:
+                print("{"+self.visit(node.expression)+"}")
+        elif type(node) == Assignment:
+            if node.value == 'NONDASSIGNMENT':
+                print("{} := *;".format(node.name))
+            else:
+                print("{} := {};".format(node.name, self.visit(node.value)))
+        elif type(node) == Function:
+            if node.type == 'CST_SYM':
+                print(node.name + "()")
+            else:
+                print("{}({})".format(node.name, self.visit(node.variable)))
+        elif type(node) == Operator:
+            if node.type == 'REPETITION':
+                print("{"+self.visit(node.left)+"}*")
+            elif node.type == 'C_EVOLOUTION':
+                print("{"+ self.visit(node.left) + " & "+ self.visit(node.right)+"}")
+            elif node.type == 'CHOICE':
+                print("{} ++ {}".format(self.visit(node.left), self.visit(node.right)))
+            elif node.type == 'TEST':
+                print("?{};".format(self.visit(node.left)))
+            elif node.type == 'DIFFERENTIAL':
+                if node.right != None:
+                    print("{} '= {}".format(self.visit(node.left), self.visit(node.right)))
+                else:
+                    print(self.visit(node.left)+"'")
+            elif node.type == '!':
+                print("!{}".fomrat(self.visit(node.left)))
+            else:
+                print("{} {} {}".fomrat(self.visit(node.left), node.type, self.visit(node.right)))
+        elif type(node) == Variable:
+            return node.value
