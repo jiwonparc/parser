@@ -99,19 +99,18 @@ precedence = (
     ('right', 'POWER')
 )
 
+def p_program_bracket(p):
+    """
+    program : LCURL program RCURL
+    """
+    syntax = SyntaxInfo(p.lineno(1), p.lexpos(1))
+    p[0] = Bracket('CURL', p[2], syntax)
+
 def p_program_form(p):
     """
     program : program program
-            | LCURL program RCURL
     """
-    if p[1] == '{':
-        syntax = SyntaxInfo(p.lineno(1), p.lexpos(1))
-        Bracket('CURL', p[2], syntax)
-    else:
-        if isinstance(p[1],Tree):
-            p[1].programs.append(p[2])
-        else:
-            p[0] = Tree([p[1],p[2]])
+    p[0] = Tree([p[1],p[2]])
 
 def p_program_repet(p):
     """
@@ -161,6 +160,7 @@ def p_program_assigntment(p):
             p[0] = Assignment(p[1], p[3], syntax)
     else:
         syntax = SyntaxInfo(p.lineno(2), p.lexpos(2))
+        p[0] = Operator('DIFFERENTIAL', syntax, left = p[1], right = [4])
 
 def p_differential_program(p):
     """
@@ -325,13 +325,7 @@ def p_term_arithmetic(p):
             p[0] = Operator(p[2], syntax, left = p[1], right = p[3])
         else:
             raise  ZeroDivisionError("cannot divide by zero")
-    elif p[2] == '+':
-        syntax = SyntaxInfo(p.lineno(2), p.lexpos(2))
-        p[0] = Operator(p[2], syntax, left = p[1], right = p[3])
-    elif p[2] == '-':
-        syntax = SyntaxInfo(p.lineno(2), p.lexpos(2))
-        p[0] = Operator(p[2], syntax, left = p[1], right = p[3])
-    elif p[2] == '*':
+    else:
         syntax = SyntaxInfo(p.lineno(2), p.lexpos(2))
         p[0] = Operator(p[2], syntax, left = p[1], right = p[3])
 
@@ -361,4 +355,3 @@ def p_error(p):
     raise TypeError("unknown text at %r" % (p.value))
 
 parser = yacc.yacc()
-
