@@ -119,17 +119,19 @@ def p_program_repet(p):
     syntax = SyntaxInfo(p.lineno(4), p.lexpos(4))
     p[0] = Operator('REPETITION', syntax, left = p[2])
 
-def p_program(p):
+def p_programs(p):
     """
     program : LCURL d_program AND formula RCURL
-            | program CHOICE program
     """
-    if p[3] == '&':
-        syntax = SyntaxInfo(p.lineno(3), p.lexpos(3))
-        p[0] = Operator('C_EVOLOUTION', syntax, left = p[2], right = p[4])
-    elif p[2] == '++':
-        syntax = SyntaxInfo(p.lineno(2), p.lexpos(2))
-        p[0] = Operator('CHOICE', syntax, left = p[1], right = p[3])
+    syntax = SyntaxInfo(p.lineno(3), p.lexpos(3))
+    p[0] = Operator('C_EVOLOUTION', syntax, left = p[2], right = p[4])
+
+def p_program_choice(p):
+    """
+    program : program CHOICE program
+    """
+    syntax = SyntaxInfo(p.lineno(2), p.lexpos(2))
+    p[0] = Operator('CHOICE', syntax, left = p[1], right = p[3])
 
 def p_program_test(p):
     """
@@ -145,22 +147,26 @@ def p_program_assigntment(p):
     """
     program : ID SEMICOLON
             | ID DEFINE STAR SEMICOLON
-            | ID DEFINE term SEMICOLON
             | ID PRIME DEFINE term SEMICOLON
     """
     if p[2] == ';':
         syntax = SyntaxInfo(p.lineno(1), p.lexpos(1))
         p[0] = Variable(p[1], 'IDENTIFIER', syntax)
-    elif p[2] == ':=':
-        if p[3] == '*':
-            syntax = SyntaxInfo(p.lineno(2), p.lexpos(2))
-            p[0] = Assignment(p[1], 'NONDASSIGNMENT', syntax)
-        else:
-            syntax = SyntaxInfo(p.lineno(2), p.lexpos(2))
-            p[0] = Assignment(p[1], p[3], syntax)
+    elif p[3] == '*':
+        syntax = SyntaxInfo(p.lineno(2), p.lexpos(2))
+        p[0] = Assignment(p[1], 'NONDASSIGNMENT', syntax)
     else:
         syntax = SyntaxInfo(p.lineno(2), p.lexpos(2))
-        p[0] = Operator('DIFFERENTIAL', syntax, left = p[1], right = [4])
+        p[0] = Operator('DIFF_ASSIGN', syntax, left = p[1], right = p[4])
+
+
+def p_assignment(p):
+    """
+    program : ID DEFINE term SEMICOLON
+
+    """
+    syntax = SyntaxInfo(p.lineno(2), p.lexpos(2))
+    p[0] = Assignment(p[1], p[3], syntax)
 
 def p_differential_program(p):
     """
@@ -172,10 +178,10 @@ def p_differential_program(p):
         syntax = SyntaxInfo(p.lineno(2), p.lexpos(2))
         p[0] = Operator('DIFFERENTIAL', syntax, left = p[1], right = p[4])
     elif p[2] == ",":
-        if isinstance(p[1], Tree):
+        if isinstance(p[1], DifferentialProgram):
             p[1].programs.append(p[3])
         else:
-            p[0] = Tree([p[1], p[3]])
+            p[0] = DifferentialProgram([p[1], p[3]])
     else:
         syntax = SyntaxInfo(p.lineno(1), p.lexpos(1))
         p[0] = Variable(p[1], 'DP_CST', syntax)
@@ -196,18 +202,20 @@ def p_formula_implication(p):
     syntax = SyntaxInfo(p.lineno(2), p.lexpos(2))
     p[0] = Operator(p[2], syntax, left = p[1], right = p[3])
 
-def p_formula_logic(p):
+def p_formula_logic_binary(p):
     """
     formula : formula OR formula
             | formula AND formula
-            | NOT formula
     """
-    if p[1] == '!':
-        syntax = SyntaxInfo(p.lineno(1), p.lexpos(1))
-        p[0] = Operator(p[1], syntax, left = p[1])
-    else:
-        syntax = SyntaxInfo(p.lineno(2), p.lexpos(2))
-        p[0] = Operator(p[2], syntax, left = p[1], right = p[3])
+    syntax = SyntaxInfo(p.lineno(1), p.lexpos(1))
+    p[0] = Operator(p[2], syntax, left = p[1], right = p[3])
+
+def p_formula_logic_unary(p):
+    """
+    program : NOT formula
+    """
+    syntax = SyntaxInfo(p.lineno(2), p.lexpos(2))
+    p[0] = Operator(p[1], syntax, left = p[2])
 
 def p_formula_quantifier(p):
     """
@@ -253,12 +261,9 @@ def p_formula_value(p):
     formula : TRUE
             | FALSE
     """
-    if p[1] == 'true':
-        syntax = SyntaxInfo(p.lineno(1), p.lexpos(1))
-        p[0] = Variable(p[1], 'BOOLEAN', syntax)
-    else:
-        syntax = SyntaxInfo(p.lineno(1), p.lexpos(1))
-        p[0] = Variable(p[1], 'BOOLEAN', syntax)
+    syntax = SyntaxInfo(p.lineno(1), p.lexpos(1))
+    p[0] = Variable(p[1], 'BOOLEAN', syntax)
+
 
 def p_term(p):
     """
@@ -272,17 +277,19 @@ def p_term(p):
         p[0] = p[1]
 
 # interpreted functions have to be added
-def p_function(p):
+def p_function_cst(p):
     """
     function : ID LPAREN RPAREN
-             | ID LPAREN term RPAREN
     """
-    if p[3] == ')':
-        syntax = SyntaxInfo(p.lineno(1), p.lexpos(1))
-        p[0] = Function(p[1], 'CST_SYM', 'constant', syntax)
-    else:
-        syntax = SyntaxInfo(p.lineno(1), p.lexpos(1))
-        p[0] = Function(p[1], 'FUNCTION', p[3].value, syntax)
+    syntax = SyntaxInfo(p.lineno(1), p.lexpos(1))
+    p[0] = Function(p[1], 'CST_SYM', 'constant', syntax)
+
+def p_function(p):
+    """
+    function : ID LPAREN term RPAREN
+    """
+    syntax = SyntaxInfo(p.lineno(1), p.lexpos(1))
+    p[0] = Function(p[1], 'FUNCTION', p[3].value, syntax)
 
 def p_term_group(p):
     """
@@ -301,15 +308,17 @@ def p_term_group(p):
 def p_differential(p):
     """
     term : term PRIME
-         | LPAREN term RPAREN PRIME
     """
-    if p[1] == '(':
-        syntax = SyntaxInfo(p.lineno(2), p.lexpos(2))
-        syntax_b = SyntaxInfo(p.lineno(1), p.lexpos(1))
-        p[0] = Operator('DIFFERENTIAL', syntax, left = Bracket('PAREN',p[2],syntax_b))
-    else:
-        syntax = SyntaxInfo(p.lineno(4), p.lexpos(4))
-        p[0] = Operator('DIFFERENTIAL', syntax, left = p[2])
+    syntax = SyntaxInfo(p.lineno(4), p.lexpos(4))
+    p[0] = Operator('DIFFERENTIAL', syntax, left = p[2])
+
+def p_differentials(p):
+    """
+    term : LPAREN term RPAREN PRIME
+    """
+    syntax = SyntaxInfo(p.lineno(2), p.lexpos(2))
+    syntax_b = SyntaxInfo(p.lineno(1), p.lexpos(1))
+    p[0] = Operator('DIFFERENTIAL', syntax, left = Bracket('PAREN',p[2],syntax_b))
 
 def p_term_arithmetic(p):
     """
@@ -320,11 +329,11 @@ def p_term_arithmetic(p):
          | term POWER term
     """
     if p[2] == '/':
-        if p[3] != 0:
+        if p[3] is 0:
+            raise  ZeroDivisionError("cannot divide by zero")
+        else:
             syntax = SyntaxInfo(p.lineno(2), p.lexpos(2))
             p[0] = Operator(p[2], syntax, left = p[1], right = p[3])
-        else:
-            raise  ZeroDivisionError("cannot divide by zero")
     else:
         syntax = SyntaxInfo(p.lineno(2), p.lexpos(2))
         p[0] = Operator(p[2], syntax, left = p[1], right = p[3])
