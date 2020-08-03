@@ -113,9 +113,9 @@ class TestParser(unittest.TestCase):
         _must_fail(parser, "a;,b;")
         """
 
-    def test_parsing(self):
+    def test_parsing_program(self):
         """
-        Trying parsing (without testing the result)
+        Trying parsing programs (without testing the result)
         """
 
         prog_to_parse = [
@@ -131,6 +131,29 @@ class TestParser(unittest.TestCase):
             res = parser.parse(p)
             print(res)
 
+    def test_parsing_formula(self):
+        """
+        Trying parsing formulas without testing the result
+        """
+
+        formulas = [
+            "< ?a < 0; ++ ?a < 0; > a < 0",
+            "[ p:=1; p:=2; ++ p:=3;] p>0",
+            "[ p:=1; ++ p:=2; p:=3;] p>0",
+            "[ p:=1; p:=2; {p:=3;}*] p>0",
+            "[ p:=1; p:=2; ++ {p:=3;}*] p>0"
+        ]
+
+
+        for i in range(len(formulas)):
+            print("Trying to parse %s" % formulas[i])
+            res = parser_formula.parse(formulas[i])
+            print ("expression parsed as %s" % res)
+            visit = Visitor().visit(res)
+            print("parsing result %s"% visit)
+
+
+
     def test_parsing_precedence(self):
         """
         Test the precedence rule
@@ -141,9 +164,17 @@ class TestParser(unittest.TestCase):
             "! p > 0 | p < 5",
             "! p > 0 -> p > 5",
             "! p > 0 <-> p > 5",
-            "! \\forall x x > 0 | p < 5",
-            "! \\exists x x > 0 | p < 5",
-            "! \\forall x [p:=x;]p >= x | p < 5",
+            "[p:=1;] p>0 & p < 1",
+            "[p:=1;] p>0 | p < 1",
+            "[p:=1;] p>0 -> p < 1",
+            "<p:=1;> p>0 & p < 1",
+            "<p:=1;> p>0 | p < 1",
+            "<p:=1;> p>0 -> p < 1",
+            "< p:=1; > <p:=2; > p>0",
+            "[ p:=1; ] <p:=2; > p>0",
+            "< p:=1; > [p:=2; ] p>0",
+            "< ?p>q; > p > 1",
+            "[ ?p>q; ] p > 1"
         ]
 
         parse_correct =[
@@ -152,19 +183,115 @@ class TestParser(unittest.TestCase):
             "((!(p > 0)) | (p < 5))",
             "((!(p > 0)) -> (p > 5))",
             "((!(p > 0)) <-> (p > 5))",
-            "((!(\\forall x x > 0)) | (p < 5))",
-            "((!(\\exists x x > 0)) | (p < 5))",
-            "((!(\\forall x ([p := x;](p >= x)))) | (p < 5))"
+            "(([p := 1;] (p > 0)) & (p < 1))",
+            "(([p := 1;] (p > 0)) | (p < 1))",
+            "(([p := 1;] (p > 0)) -> (p < 1))",
+            "((<p := 1;> (p > 0)) & (p < 1))",
+            "((<p := 1;> (p > 0)) | (p < 1))",
+            "((<p := 1;> (p > 0)) -> (p < 1))",
+            "(<p := 1;> (<p := 2;> (p > 0)))",
+            "([p := 1;] (<p := 2;> (p > 0)))",
+            "(<p := 1;> ([p := 2;] (p > 0)))",
+            "(<?(p > q);> (p > 1))",
+            "([?(p > q);] (p > 1))"
         ]
 
         for i in range(len(to_parse)):
             print("Trying to parse %s" % to_parse[i])
             res = parser_formula.parse(to_parse[i])
-            print("parsed %s"% res)
             visit = Visitor().visit(res)
             print("parsing result %s"% visit)
             print("correct result %s"% parse_correct[i])
-            #self.assertTrue(visit == parse_correct[i])
+            self.assertTrue(visit == parse_correct[i])
+
+    def test_arithmetic(self):
+        """
+        Testing the precedence of arithmetic operators
+        """
+
+        arithmetic = [
+            "p + q * r = s",
+            "p * q + r = s",
+            "p - q * r = s",
+            "p * q - r = s",
+            "-p + q = s",
+            "p - q - s = 0",
+            "p^2 >= 0",
+            "p^2 + q^2 = s^2",
+            "p^5 * p^3 * q^2 >= 0",
+            "1^2 + 3^2 = s^2",
+            "p^5 * p^3 * q^2 >= 0"
+        ]
+
+        correct = [
+            "((p + (q * r)) = s)",
+            "(((p * q) + r) = s)",
+            "((p - (q * r)) = s)",
+            "(((p * q) - r) = s)",
+            "((-p + q) = s)",
+            "(((p - q) - s) = 0)",
+            "((p ^ 2) >= 0)",
+            "(((p ^ 2) + (q ^ 2)) = (s ^ 2))",
+            "((((p ^ 5) * (p ^ 3)) * (q ^ 2)) >= 0)",
+            "(((1 ^ 2) + (3 ^ 2)) = (s ^ 2))",
+            "((((p ^ 5) * (p ^ 3)) * (q ^ 2)) >= 0)"
+        ]
+
+        for i in range(len(arithmetic)):
+            print("Trying to parse %s" % arithmetic[i])
+            res = parser_formula.parse(arithmetic[i])
+            visit = Visitor().visit(res)
+            print("parsing result %s"% visit)
+            print("correct result %s"% correct[i])
+            self.assertTrue(visit == correct[i])
+
+    def test_parsing_quantifier(self):
+        """
+        Testing precedence of quantifier operators
+        """
+
+        quant_expression = [
+            "! \\forall x x > 0 | p < 5",
+            "! \\exists x x > 0 | p < 5",
+            "! \\forall x [p:=x;]p >= x | p < 5",
+            "\\forall x x > 2 & a < 0",
+            "\\forall x x > 2 | a < 0",
+            "\\forall x x > 2 -> a < 0",
+            "\\forall x x > 2 <-> a < 0",
+            "\\exists x x > 2 & a < 0",
+            "\\exists x x > 2 | a < 0",
+            "\\exists x x > 2 -> a < 0",
+            "\\exists x x > 2 <-> a < 0",
+            "\\forall x [x:=1;]<x:=2;>x>0",
+            "\\exists x [x:=1;]<x:=2;>x>0",
+            "[p:=0;]\\forall x [x:=p;] \\exists y [q := x + y; ] q > 0",
+        ]
+
+        correct = [
+            "((!(\\forall x x > 0)) | (p < 5))",
+            "((!(\\exists x x > 0)) | (p < 5))",
+            "((!(\\forall x ([p := x;] (p >= x)))) | (p < 5))",
+            "((\\forall x (x > 2)) & (a < 0))",
+            "((\\forall x (x > 2)) | (a < 0))",
+            "((\\forall x (x > 2)) -> (a < 0))",
+            "((\\forall x (x > 2)) <-> (a < 0))",
+            "((\\exists x (x > 2)) & (a < 0))",
+            "((\\exists x (x > 2)) | (a < 0))",
+            "((\\exists x (x > 2)) -> (a < 0))",
+            "((\\exists x (x > 2)) <-> (a < 0))",
+            "(\\forall x ([x := 1;] <x := 2;> (x > 0)))",
+            "(\\exists x ([x := 1;] <x := 2;> (x > 0)))",
+            "([p := 0;] (\\forall x [x := p;] (\\exists y [q := x + y;] q > 0)))",
+        ]
+
+        for i in range(len(quant_expression)):
+            print("Trying to parse %s" % quant_expression[i])
+            res = parser_formula.parse(quant_expression[i])
+            visit = Visitor().visit(res)
+            print("parsing result %s"% visit)
+            print("correct result %s"% correct[i])
+            self.assertTrue(visit == correct[i])
+
 
 
 class TestAST(unittest.TestCase):
