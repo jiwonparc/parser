@@ -9,7 +9,9 @@ from io import StringIO
 
 from ply.lex import LexToken
 import ply.yacc as yacc
-from parser import lexer, reset, parser
+from parser import lexer, reset, parser, parser_formula
+from AST import *
+
 
 
 
@@ -112,18 +114,78 @@ class TestParser(unittest.TestCase):
         """
 
     def test_parsing(self):
-        """ Test if the following expressions can be
-        parsed (without testing the result)
+        """
+        Trying parsing (without testing the result)
         """
 
         prog_to_parse = [
             "x := f();",
             "x' := f();",
             "? x = f();",
-            "x = 0 & A > 0 & B > 0 -> [{a := A; ++ a := B;}{x' = v, v' = a}]x >= 0"]
+            #"x = 0 & A > 0 & B > 0 -> [{a := A; ++ a := B;}{x' = v, v' = a}]x >= 0"
+            ]
 
 
         for p in prog_to_parse:
             print("Trying to parse %s" % p)
             res = parser.parse(p)
+            print(res)
+
+    def test_parsing_precedence(self):
+        """
+        Test the precedence rule
+        """
+        to_parse = [
+            "! p > 0 & p < 5",
+            "! p = 0 & p = 5",
+            "! p > 0 | p < 5",
+            "! p > 0 -> p > 5",
+            "! p > 0 <-> p > 5",
+            "! \\forall x x > 0 | p < 5",
+            "! \\exists x x > 0 | p < 5",
+            "! \\forall x [p:=x;]p >= x | p < 5",
+        ]
+
+        parse_correct =[
+            "((!(p > 0)) & (p < 5))",
+            "((!(p = 0)) & (p = 5))",
+            "((!(p > 0)) | (p < 5))",
+            "((!(p > 0)) -> (p > 5))",
+            "((!(p > 0)) <-> (p > 5))",
+            "((!(\\forall x x > 0)) | (p < 5))",
+            "((!(\\exists x x > 0)) | (p < 5))",
+            "((!(\\forall x ([p := x;](p >= x)))) | (p < 5))"
+        ]
+
+        for i in range(len(to_parse)):
+            print("Trying to parse %s" % to_parse[i])
+            res = parser_formula.parse(to_parse[i])
+            print("parsed %s"% res)
+            visit = Visitor().visit(res)
+            print("parsing result %s"% visit)
+            print("correct result %s"% parse_correct[i])
+            #self.assertTrue(visit == parse_correct[i])
+
+
+class TestAST(unittest.TestCase):
+    def setUp(self):
+        # Run before every test
+        reset()
+
+    def test_visit(self):
+        """ Test the visitor pattern
+        test cases are from KeYmaera Wiki page
+        https://github.com/LS-Lab/KeYmaeraX-release/wiki/KeYmaera-X-Syntax-and-Informal-Semantics
+        """
+
+        input_to_return = [
+            "{x' = v, v' = a & v >= 0 & x >= 0}",
+            "{x := 0; y := 0;} ++ {x :=0; y:=*;} ++ {x:=*; y:=*;}",
+            "t := 0; {t' = 1 & t < 5} x := t^2;",
+        ]
+
+        for p in input_to_return:
+            print("Trying to visit %s" % p)
+            par = parser.parse(p)
+            res = Visitor().visit(par)
             print(res)
