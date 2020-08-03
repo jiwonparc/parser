@@ -21,6 +21,7 @@ tokens = [
     'LIMPLY', 'RIMPLY', 'BIMPLY',
     'PRIME',
     'COMMA', 'SEMICOLON', 'DEFINE', 'TEST', 'CHOICE',
+    'IF', 'ELSE'
 ] + list(reserved.values())
 
 t_OR = r'[|]'
@@ -55,6 +56,8 @@ t_SEMICOLON = r';'
 t_DEFINE = r':='
 t_TEST = r'\?'
 t_CHOICE = r'\+{2}'
+t_IF = r'if'
+t_ELSE = r'else'
 
 t_ignore = r' '
 
@@ -98,6 +101,19 @@ precedence = (
     ('left', 'STAR', 'DIVIDE'),
     ('right', 'POWER')
 )
+
+def p_program_conditional(p):
+    """
+    program : IF LPAREN formula RPAREN LCURL program RCURL ELSE LCURL program RCURL
+            | IF LPAREN formula RPAREN LCURL program RCURL
+    """
+    if len(p) == 8:
+        syntax = SyntaxInfo(p.lineno(1), p.lexpos(1))
+        p[0] = Conditional(p[3], p[6], syntax)
+    else:
+        syntax = SyntaxInfo(p.lineno(1), p.lexpos(1))
+        p[0] = Conditional(p[3], p[6], p[10], syntax)
+
 
 def p_program_bracket(p):
     """
@@ -153,11 +169,15 @@ def p_program_assigntment(p):
         syntax = SyntaxInfo(p.lineno(1), p.lexpos(1))
         p[0] = Variable(p[1], 'IDENTIFIER', syntax)
     elif p[3] == '*':
+        syntax_var = SyntaxInfo(p.lineno(1), p.lexpos(1))
+        var = Variable(p[1], 'IDENTIFIER', syntax_var)
         syntax = SyntaxInfo(p.lineno(2), p.lexpos(2))
-        p[0] = Assignment(p[1], 'NONDASSIGNMENT', syntax)
+        p[0] = Assignment(var, Nondeterminant(), syntax)
     else:
+        syntax_var = SyntaxInfo(p.lineno(1), p.lexpos(1))
+        var = Variable(p[1], 'IDENTIFIER', syntax_var)
         syntax = SyntaxInfo(p.lineno(2), p.lexpos(2))
-        p[0] = Operator('DIFF_ASSIGN', syntax, left = p[1], right = p[4])
+        p[0] = Operator('DIFF_ASSIGN', syntax, left = var, right = p[4])
 
 
 def p_assignment(p):
@@ -165,8 +185,10 @@ def p_assignment(p):
     program : ID DEFINE term SEMICOLON
 
     """
+    syntax = SyntaxInfo(p.lineno(1), p.lexpos(1))
+    var = Variable(p[1], 'IDENTIFIER', syntax)
     syntax = SyntaxInfo(p.lineno(2), p.lexpos(2))
-    p[0] = Assignment(p[1], p[3], syntax)
+    p[0] = Assignment(var, p[3], syntax)
 
 def p_differential_program(p):
     """
@@ -212,7 +234,7 @@ def p_formula_logic_binary(p):
 
 def p_formula_logic_unary(p):
     """
-    program : NOT formula
+    formula : NOT formula
     """
     syntax = SyntaxInfo(p.lineno(2), p.lexpos(2))
     p[0] = Operator(p[1], syntax, left = p[2])
@@ -363,4 +385,6 @@ def p_error(p):
     print("p_error {}".format(p))
     raise TypeError("unknown text at %r" % (p.value))
 
+
 parser = yacc.yacc()
+parser_formula = yacc.yacc(start='formula')
