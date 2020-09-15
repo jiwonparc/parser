@@ -316,3 +316,15 @@ class TestAST(unittest.TestCase):
             par = parser.parse(p)
             res = Visitor().visit(par)
             print(res)
+
+class TestTranslating(unittest.TestCase):
+    def setUp(self):
+        # Run before every test
+        reset()
+
+
+    def test_translate(self):
+        """ Try translating a simple case without tasting """
+        a = "t := 0; {t' = 1 & t < 5} x := t^2;"
+        par = parser.parse(p)
+        print(translate_tree(par))
